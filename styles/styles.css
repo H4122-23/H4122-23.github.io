@@ -32,3 +32,15 @@ input[type="submit"] {
     margin-bottom: 0.5em;
     font-size: 14px;
 }   
+
+header .logo {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  header .logo img {
+    height: 5em;
+    width: auto;
+    transition: transform 400ms ease;
+  }
