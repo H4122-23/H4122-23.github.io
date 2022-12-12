@@ -1,3 +1,9 @@
+function transformString(str) {
+  return str.replace(/\b[a-z]/g, function(letter) {
+    return letter.toUpperCase();
+  });
+}
+
 function rechercher(search_word, result_id) {
   var contenu_requete = 
   `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
@@ -6,7 +12,7 @@ function rechercher(search_word, result_id) {
   SELECT ?scientist
   WHERE {
     ?scientist a dbpedia-owl:Scientist; foaf:name ?name.
-    FILTER(regex(?name, "${search_word}"))
+    FILTER(regex(?name, "${transformString(search_word)}"))
   }
   LIMIT 100`;
   // Encodage de l'URL à transmettre à DBPedia
