@@ -1,15 +1,14 @@
-function rechercher(result_id) {
-  console.log(result_id)
+function rechercher(search_word, result_id) {
   var contenu_requete = 
   `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
   PREFIX dbpedia-owl: <http://dbpedia.org/ontology/>
 
   SELECT ?scientist
   WHERE {
-    ?scientist a dbpedia-owl:Scientist.
+    ?scientist a dbpedia-owl:Scientist; foaf:name ?name.
+    FILTER(regex(?name, "${search_word}"))
   }
   LIMIT 100`;
-
   // Encodage de l'URL à transmettre à DBPedia
   var url_base = "http://dbpedia.org/sparql";
   var url = url_base + "?query=" + encodeURIComponent(contenu_requete) + "&format=json";

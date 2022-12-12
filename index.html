@@ -25,7 +25,7 @@
             <input type="text" id="search-input" />
         </label>
     </form>
-    <button onclick="rechercher('resultats')">Rechercher</button>
+    <button onclick="rechercher(document.querySelector('input').value, 'resultats')">Rechercher</button>
     <table id="resultats">
 
     </table>
