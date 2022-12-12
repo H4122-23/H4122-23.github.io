@@ -7,6 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="asset/logo.svg" />
     <title>SCIENT'IF</title>
     <link rel="stylesheet" href="styles/styles.css">
+    <script src="./src/script.js"></script>
 </head>
 
 <body>
@@ -23,9 +24,11 @@
             Search:
             <input type="text" id="search-input" />
         </label>
-        <input type="submit" value="Submit" />
     </form>
-    <div id="results">result</div>
+    <button onclick="rechercher('resultats')">Rechercher</button>
+    <table id="resultats">
+
+    </table>
 </body>
 
 </html>

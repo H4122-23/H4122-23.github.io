@@ -1,63 +1,72 @@
-const form = document.querySelector("form");
-const searchInput = document.querySelector("#search-input");
-const resultsDiv = document.querySelector("#results");
+function rechercher(result_id) {
+  console.log(result_id)
+  var contenu_requete = 
+  `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+  PREFIX dbpedia-owl: <http://dbpedia.org/ontology/>
 
-// Define your SPARQL query as a string
-const query = `
-        PREFIX ont: <http://dbpedia.org/ontology/>
-        SELECT * WHERE {
-         ?Scientist a dbo:Scientist .   
-        }`;
-//     const query = `
-//     SELECT ?name ?abstract ?thumbnail
-//     WHERE {
-//       ?person a dbo:Person.
-//       ?person rdfs:label ?name.
-//       ?person dbo:abstract ?abstract.
-//       ?person dbo:thumbnail ?thumbnail.
-//       FILTER(LANG(?abstract) = 'en')
-//     }
-//   `;
-
-// Define a function that sends the query to the DBpedia SPARQL endpoint
-// and returns the results
-const search = async (query) => {
-  const endpointUrl = "http://dbpedia.org/sparql";
-  const fullUrl =
-    endpointUrl + "?query=" + encodeURIComponent(query) + "&format=json";
-
-  try {
-    const response = await fetch(fullUrl);
-    const results = await response.json();
-
-    return results.bindings.map((result) => {
-      return {
-        name: result.name.value,
-        abstract: result.abstract.value,
-        thumbnail: result.thumbnail.value,
-      };
-    });
-  } catch (error) {
-    console.log(error);
+  SELECT ?scientist
+  WHERE {
+    ?scientist a dbpedia-owl:Scientist.
   }
-};
+  LIMIT 100`;
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
+  // Encodage de l'URL à transmettre à DBPedia
+  var url_base = "http://dbpedia.org/sparql";
+  var url = url_base + "?query=" + encodeURIComponent(contenu_requete) + "&format=json";
 
-  // Get the search query
-  const query = searchInput.value;
+  // Requête HTTP et affichage des résultats
+  var xmlhttp = new XMLHttpRequest();
+  xmlhttp.onreadystatechange = function () {
+    if (this.readyState == 4 && this.status == 200) {
+      var results = JSON.parse(this.responseText);
+      console.log(results)
+      afficherResultats(results, result_id);
+    }
+  };
+  xmlhttp.open("GET", url, true);
+  xmlhttp.send();
+}
 
-  // Use the search query to search your database or API
-  // and display the results
+// Affichage des résultats dans un tableau
+function afficherResultats(data, result_id) {
+  console.log(result_id)
+  // Tableau pour mémoriser l'ordre des variables ; sans doute pas nécessaire
+  // pour vos applications, c'est juste pour la démo sous forme de tableau
+  var index = [];
 
-  const results = await search(query);
-  console.log(result);
-  resultsDiv.innerHTML = "";
-  results.forEach((result) => {
-    const resultDiv = document.createElement("div");
-    resultDiv.classList.add("result");
-    resultDiv.textContent = result.title;
-    resultsDiv.appendChild(resultDiv);
+  var contenuTableau = "<tr>";
+
+  data.head.vars.forEach((v, i) => {
+    contenuTableau += "<th>" + v + "</th>";
+    index.push(v);
   });
-});
+
+  data.results.bindings.forEach(r => {
+    contenuTableau += "<tr>";
+
+    index.forEach(v => {
+
+      if (r[v]) {
+        if (r[v].type === "uri") {
+          contenuTableau += "<td><a href='" + r[v].value + "' target='_blank'>" + r[v].value + "</a></td>";
+        }
+        else {
+          contenuTableau += "<td>" + r[v].value + "</td>";
+        }
+      }
+      else {
+        contenuTableau += "<td></td>";
+      }
+
+    });
+
+
+    contenuTableau += "</tr>";
+  });
+
+
+  contenuTableau += "</tr>";
+
+  document.getElementById(result_id).innerHTML = contenuTableau;
+
+}
