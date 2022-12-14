@@ -29,11 +29,17 @@ function rechercher(search_word, result_id) {
     if (this.readyState == 4 && this.status == 200) {
       var results = JSON.parse(this.responseText);
       console.log(results)
+      // Display loading spinner #loading-spinner
+    document.getElementById("loading-spinner").classList.add("d-none");
+    document.getElementById("search-icon").classList.remove("d-none");
       afficherResultats(results, result_id);
     }
   };
   xmlhttp.open("GET", url, true);
   xmlhttp.send();
+  // Display loading spinner #loading-spinner
+  document.getElementById("loading-spinner").classList.remove("d-none");
+    document.getElementById("search-icon").classList.add("d-none");
 }
 
 // Affichage des résultats dans un tableau
