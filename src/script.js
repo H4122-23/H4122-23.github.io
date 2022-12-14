@@ -4,6 +4,19 @@ function transformString(str) {
   });
 }
 
+function createSparqlQuery(predicate, object) {
+return `PREFIX dbo: <http://dbpedia.org/ontology/>
+SELECT * 
+WHERE 
+{
+  ?scientist a dbo:Scientist.
+  ?scientist ${predicate} "${object}".
+}
+ORDER BY ?scientistLabel
+LIMIT 100`
+;
+}
+
 function rechercher(search_word, result_id) {
   var contenu_requete = 
 `
