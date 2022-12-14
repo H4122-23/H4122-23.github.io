@@ -46,7 +46,10 @@
         <form class="d-flex my-5 w-75 mx-auto" id="searchbar">
             <input class="form-control me-1" type="search" placeholder="Search" aria-label="Search">
             <button class="btn btn-primary">
-                <i class="bi bi-search"></i>
+                <i class="bi bi-search" id="search-icon"></i>
+                <div class="spinner-border d-none" id="loading-spinner" role="status" style="width: 1rem; height: 1rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
             </button>
         </form>
 
