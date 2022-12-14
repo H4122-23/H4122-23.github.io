@@ -332,6 +332,9 @@
             </button>
         </div>
 
+        <table id="resultatsDay" class="table table-striped">
+
+        </table>
         <table id="resultats" class="table table-striped">
 
         </table>
@@ -418,9 +421,11 @@
             if (value != '') {
                 document.getElementById('scientistOfTheDay').classList.add('d-none');
                 rechercher(value, 'resultats');
+                
             } else {
                 // Else show the scientist of the day
                 document.getElementById('scientistOfTheDay').classList.remove('d-none');
+                //findScientistOfTheDay('scientistOfTheDay');
                 // And remove the results
                 document.getElementById('resultats').innerHTML = '';
             }
