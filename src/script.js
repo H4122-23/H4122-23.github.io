@@ -1,6 +1,12 @@
+function transformString(str) {
+  return str.replace(/\b[a-z]/g, function(letter) {
+    return letter.toUpperCase();
+  });
+}
+
 function rechercher(search_word, result_id) {
   var contenu_requete = 
-  `
+
   SELECT DISTINCT ?scientist ?scientistLabel
   WHERE
   {
