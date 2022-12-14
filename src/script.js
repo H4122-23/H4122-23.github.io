@@ -11,7 +11,13 @@ function rechercher(search_word, result_id) {
   WHERE
   {
     ?scientist wdt:P31 wd:Q5. 
-    ?scientist wdt:P106 wd:Q901.
+    {?scientist wdt:P106 wd:Q901.}
+    UNION
+    {?scientist wdt:P106 wd:Q169470}
+    UNION
+    {?scientist wdt:P106 wd:Q593644}
+    UNION
+    {?scientist wdt:P106 wd:Q170790}
     ?scientist rdfs:label ?scientistLabel
     FILTER(lang(?scientistLabel) = "en")
     FILTER(regex(?scientistLabel, "${search_word}","i")) 
