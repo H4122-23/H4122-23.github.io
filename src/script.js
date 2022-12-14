@@ -6,17 +6,21 @@ function transformString(str) {
 
 function rechercher(search_word, result_id) {
   var contenu_requete = 
-  `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
-  PREFIX dbpedia-owl: <http://dbpedia.org/ontology/>
 
-  SELECT ?scientist
-  WHERE {
-    ?scientist a dbpedia-owl:Scientist; foaf:name ?name.
-    FILTER(regex(?name, "${transformString(search_word)}"))
+  SELECT DISTINCT ?scientist ?scientistLabel
+  WHERE
+  {
+    ?scientist wdt:P31 wd:Q5. 
+    ?scientist wdt:P106 wd:Q901.
+    ?scientist rdfs:label ?scientistLabel
+    FILTER(lang(?scientistLabel) = "en")
+    FILTER(regex(?scientistLabel, "${search_word}","i")) 
   }
-  LIMIT 100`;
+  ORDER BY ?scientistLabel
+  LIMIT 100
+`;
   // Encodage de l'URL à transmettre à DBPedia
-  var url_base = "http://dbpedia.org/sparql";
+  var url_base = "http://query.wikidata.org/sparql";
   var url = url_base + "?query=" + encodeURIComponent(contenu_requete) + "&format=json";
 
   // Requête HTTP et affichage des résultats
