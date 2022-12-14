@@ -14,11 +14,11 @@
     <!-- Navigation bar -->
     <nav class="navbar navbar-expand-lg mb-5" style="background-color: #6075d4;">
         <div class="container-fluid">
-            <a class="navbar-brand d-flex" href="#">
-                <img src="/asset/logo.svg" alt="Logo" style="height: 3em;">
+            <a class="navbar-brand d-flex" id="logo" href="">
+                <img src="/asset/logo.svg" alt="Logo" style="height: 3em;"/>
                 <section>
                     <p class="navbar-brand fw-bold mb-0 pb-0 lh-1">Scient'IF</p>
-                    <p class="fst-italic fw-light lh-1">Search engine of world scientists</p>
+                    <p class="fst-italic fw-light lh-1 text-wrap">Search engine of world scientists</p>
                 </section>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
@@ -27,9 +27,6 @@
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="#">Home</a>
-                    </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#">About Us</a>
                     </li>
@@ -60,7 +57,7 @@
                         <div class="row g-0">
                             <a class="col-md-3 m-3" data-bs-toggle="collapse" data-bs-target="#card-details-01"
                                 style="cursor: pointer;">
-                                <img src="/asset/place-holder.png" class="img-fluid rounded-start" alt="...">
+                                <img src="/asset/place-holder.png" class="img-fluid rounded-start" alt="..."/>
                             </a>
                             <div class="col-md-8 text-start">
                                 <div class="card-body">
@@ -147,7 +144,7 @@
                         <div class="row g-0">
                             <a class="col-md-3 m-3" data-bs-toggle="collapse" data-bs-target="#card-details-02"
                                 style="cursor: pointer;">
-                                <img src="/asset/place-holder.png" class="img-fluid rounded-start" alt="...">
+                                <img src="/asset/place-holder.png" class="img-fluid rounded-start" alt="..."/>
                             </a>
                             <div class="col-md-8 text-start">
                                 <div class="card-body">
@@ -234,7 +231,7 @@
                         <div class="row g-0">
                             <a class="col-md-3 m-3" data-bs-toggle="collapse" data-bs-target="#card-details-03"
                                 style="cursor: pointer;">
-                                <img src="/asset/place-holder.png" class="img-fluid rounded-start" alt="...">
+                                <img src="/asset/place-holder.png" class="img-fluid rounded-start" alt="..."/>
                             </a>
                             <div class="col-md-8 text-start">
                                 <div class="card-body">
@@ -338,7 +335,7 @@
             <div class="row g-0">
                 <a class="col-md-3 m-3" data-bs-toggle="collapse" data-bs-target="#card-details"
                     style="cursor: pointer;">
-                    <img src="/asset/place-holder.png" class="img-fluid rounded-start" alt="...">
+                    <img src="/asset/place-holder.png" class="img-fluid rounded-start" alt="..."/>
                 </a>
                 <div class="col-md-8 text-start">
                     <div class="card-body">
@@ -421,6 +418,12 @@
                 // And remove the results
                 document.getElementById('resultats').innerHTML = '';
             }
+        });
+
+        // Remove the resutls and show the scientist of the day on click on the logo
+        document.getElementById('logo').addEventListener('click', function (event) {
+            document.getElementById('scientistOfTheDay').classList.remove('d-none');
+            document.getElementById('resultats').innerHTML = '';
         });
 
     </script>
