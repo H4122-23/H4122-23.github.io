@@ -4,29 +4,32 @@ function transformString(str) {
   });
 }
 
+function createSparqlQuery(predicate, object) {
+return `PREFIX dbo: <http://dbpedia.org/ontology/>
+SELECT * 
+WHERE 
+{
+  ?scientist a dbo:Scientist.
+  ?scientist ${predicate} "${object}".
+}
+ORDER BY ?scientistLabel
+LIMIT 100`
+;
+}
+
 function rechercher(search_word, result_id) {
   var contenu_requete = 
-`
-  SELECT DISTINCT ?scientist ?scientistLabel
-  WHERE
-  {
-    ?scientist wdt:P31 wd:Q5. 
-    {?scientist wdt:P106 wd:Q901.}
-    UNION
-    {?scientist wdt:P106 wd:Q169470}
-    UNION
-    {?scientist wdt:P106 wd:Q593644}
-    UNION
-    {?scientist wdt:P106 wd:Q170790}
-    ?scientist rdfs:label ?scientistLabel
-    FILTER(lang(?scientistLabel) = "en")
-    FILTER(regex(?scientistLabel, "${search_word}","i")) 
+  `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+  PREFIX dbpedia-owl: <http://dbpedia.org/ontology/>
+
+  SELECT ?scientist
+  WHERE {
+    ?scientist a dbpedia-owl:Scientist; foaf:name ?name.
+    FILTER(regex(?name, "${transformString(search_word)}"))
   }
-  ORDER BY ?scientistLabel
-  LIMIT 100
-`;
+  LIMIT 100`;
   // Encodage de l'URL à transmettre à DBPedia
-  var url_base = "http://query.wikidata.org/sparql";
+  var url_base = "http://dbpedia.org/sparql";
   var url = url_base + "?query=" + encodeURIComponent(contenu_requete) + "&format=json";
 
   // Requête HTTP et affichage des résultats
@@ -35,11 +38,17 @@ function rechercher(search_word, result_id) {
     if (this.readyState == 4 && this.status == 200) {
       var results = JSON.parse(this.responseText);
       console.log(results)
+      // Display loading spinner #loading-spinner
+    document.getElementById("loading-spinner").classList.add("d-none");
+    document.getElementById("search-icon").classList.remove("d-none");
       afficherResultats(results, result_id);
     }
   };
   xmlhttp.open("GET", url, true);
   xmlhttp.send();
+  // Display loading spinner #loading-spinner
+  document.getElementById("loading-spinner").classList.remove("d-none");
+    document.getElementById("search-icon").classList.add("d-none");
 }
 
 // Affichage des résultats dans un tableau
