@@ -6,7 +6,7 @@ function transformString(str) {
 
 function rechercher(search_word, result_id) {
   var contenu_requete = 
-
+`
   SELECT DISTINCT ?scientist ?scientistLabel
   WHERE
   {
