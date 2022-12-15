@@ -215,6 +215,7 @@ async function createScientistOfTheDay(id="scientist-of-the-day") {
  */
 async function createSearchResults(name, id="search-results", limit=50) {
     var scientists = await searchScientist(name, limit);
+    document.getElementById(id).innerHTML = "";
     scientists.forEach(s => {
         var card = createCard(s);
         document.getElementById(id).appendChild(card);
