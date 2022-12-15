@@ -94,9 +94,6 @@ async function getScientistOfTheDay(limit=3) {
  * @returns {object} The list of scientists.
  */
 async function searchScientist(name, limit=50) {
-    // Break the search string into words and join them with the OR operator.
-    name = name.split(" ").join("|");
-
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
