@@ -80,6 +80,7 @@ async function getScientistOfTheDay(limit=3) {
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
     }
+    ORDER BY DESC(COUNT(?link))
     LIMIT ${limit}
     `;
 
@@ -117,6 +118,7 @@ async function searchScientist(name, limit=50) {
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
     }
+    ORDER BY DESC(COUNT(?link))
     LIMIT ${limit}
     `;
 
