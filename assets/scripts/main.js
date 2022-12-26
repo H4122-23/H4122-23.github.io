@@ -127,6 +127,74 @@ async function searchScientist(name, limit=50) {
 }
 
 /**
+ * Search a scientist by institution
+ * @param {string} institution - The name of the institution.
+ * @returns {object} The list of scientists.
+ */
+async function searchScientistByInstitution(institution) {
+    const query = `
+    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
+    (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
+    (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
+    WHERE {
+        ?scientist a dbo:Scientist;
+                foaf:name ?name;
+                rdfs:comment ?comment;
+                dbo:wikiPageWikiLink ?link.
+        OPTIONAL {?scientist dbo:abstract ?abstract}
+        OPTIONAL {?scientist dbo:birthDate ?birthdate}
+        OPTIONAL {?scientist dbp:birthDate ?birthdate}
+        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
+        OPTIONAL {?scientist dbp:education ?education}
+        OPTIONAL {?scientist dbp:almaMater ?education}
+        OPTIONAL {?scientist foaf:homepage ?homepage}
+        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
+        FILTER(regex(?education,"${institution}"))
+        FILTER(langMatches(lang(?comment), "EN"))
+        FILTER(langMatches(lang(?abstract), "EN"))
+    }
+    ORDER BY DESC(COUNT(?link))
+    `;
+    var response = await dps.client().query(query).asJson()
+    return await response.results.bindings.map(cleanObject);
+}
+
+/**
+ * Search a scientist by field
+ * @param {string} field - The name of the field.
+ * @param {number} limit - The number of results to return.
+ * @returns {object} The list of scientists.
+ */
+async function searchScientistByField(field) {
+    const query = `
+    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
+    (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
+    (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
+    WHERE {
+        ?scientist a dbo:Scientist;
+                foaf:name ?name;
+                rdfs:comment ?comment;
+                dbo:wikiPageWikiLink ?link.
+        OPTIONAL {?scientist dbo:abstract ?abstract}
+        OPTIONAL {?scientist dbo:birthDate ?birthdate}
+        OPTIONAL {?scientist dbp:birthDate ?birthdate}
+        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
+        OPTIONAL {?scientist dbp:education ?education}
+        OPTIONAL {?scientist dbp:almaMater ?education}
+        OPTIONAL {?scientist foaf:homepage ?homepage}
+        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
+        FILTER(regex(?fields,"${field}"))
+        FILTER(langMatches(lang(?comment), "EN"))
+        FILTER(langMatches(lang(?abstract), "EN"))
+    }
+    ORDER BY DESC(COUNT(?link))
+    `;
+    var response = await dps.client().query(query).asJson()
+    return await response.results.bindings.map(cleanObject);
+}
+
+
+/**
  * Create a card for a scientist.
  * @param {object} object - The scientist to create a card for.
  * @returns {Element} The HTML of the card.
