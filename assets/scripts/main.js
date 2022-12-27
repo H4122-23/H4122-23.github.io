@@ -1,6 +1,6 @@
 var dps = require('dbpedia-sparql-client').default;
 var selectedBadges = [];
-const baseQuery = 
+
 /**
  * Clean sparql result to plain javascript objects.
  * @param {object} object - The object to clean.
