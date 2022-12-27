@@ -1,5 +1,4 @@
 var dps = require('dbpedia-sparql-client').default;
-var selectedBadges = [];
 
 /**
  * Clean sparql result to plain javascript objects.
@@ -19,7 +18,7 @@ function cleanObject(object) {
             value = value.filter((v) => v != "");
             // Transform URIs into labels
             value = value.map(async (v) => {
-                if (!v.startsWith("http")) return { uri: v, label: v };
+                if (!v.startsWith("http")) return { uri: "", label: v };
                 return await { uri: v, label: getLabel(v) };
             });
         }
@@ -97,7 +96,14 @@ async function getScientistOfTheDay(limit = 3) {
  * @param {number} limit - The number of results to return.
  * @returns {object} The list of scientists.
  */
-async function searchScientist(name, institution,field) {
+async function searchScientist(search, limit = 50) {
+    let filters = ""; // Build the filters dynamically
+    Object.entries(search).forEach(([key, value]) => {
+        if (value != "") {
+            filters += `FILTER (regex(?${key}, "${value}", "i"))\n`
+        }
+    });
+
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
@@ -116,9 +122,7 @@ async function searchScientist(name, institution,field) {
         OPTIONAL {?scientist dbp:almaMater ?education}
         OPTIONAL {?scientist foaf:homepage ?homepage}
         OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER (regex(?name, "${name}", "i"))
-        FILTER(regex(?education,"${institution}"))
-        FILTER(regex(?fields,"${field}"))
+        ${filters}
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
     }
@@ -325,14 +329,14 @@ async function createScientistOfTheDay(id = "scientist-of-the-day") {
 /**
  * Create the cards for the search results.
  * @param {string} id - The ID of the element to append the cards to.
- * @param {string} name - The name of the scientist to search.
  * @param {number} limit - The number of results to return.
  */
-async function createSearchResults(name, id="search-results", limit=50) {
-    var scientists = await searchScientistByName(name, limit);
+async function createSearchResults(search, id="search-results", limit=50) {
+
+    let scientists = await searchScientist(search, limit)
     document.getElementById(id).innerHTML = "";
     scientists.forEach(s => {
-        var card = createCard(s);
+        let card = createCard(s);
         document.getElementById(id).appendChild(card);
     });
 }
@@ -347,22 +351,23 @@ async function createSearchResults(name, id="search-results", limit=50) {
 function createBadge(text, uri, type) {
     let badge = document.createElement("span");
     badge.classList.add("badge", "rounded-pill", "m-1", type);
-    badge.style.textDecoration = "none";
-    badge.style.cursor = "pointer";
     badge.innerHTML = text;
+
+    if (uri == "") { return badge;}
+
+    // Only if URI exists.
     badge.dataset.uri = uri.split("/").pop();
+    badge.style.cursor = "pointer";
 
     // On click duplicate the badge and add it to the selected badges.
     badge.onclick = function () {
-        // Check if the badge is already selected.
-        if (selectedBadges.includes(this.innerHTML)) { return; }
 
-        let selected = document.getElementById("selected-badges");
+        let selected = document.getElementById(`selected-${type}`);
         let newBadge = this.cloneNode(true);
         newBadge.onclick = function () { this.remove(); }
 
-        selected.replaceChild(newBadge, selected.lastChild);
-        selectedBadges.push(newBadge.innerHTML);
+        selected.innerHTML = "";
+        selected.appendChild(newBadge);
     }
     return badge;
 }

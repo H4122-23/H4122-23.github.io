@@ -17,6 +17,7 @@
         background-color: var(--bs-cyan);
         color: white;
     }
+
     .education {
         background-color: var(--bs-teal);
         color: white;
@@ -70,10 +71,12 @@
             </button>
         </form>
 
-        <div class="my-3" id="selected-badges">
-            <span class="text-muted text-center">Tags selected:</span>
+        <section class="m-4">
+            <span class="text-muted text-center">Selected tags: </span>
+            <span id="selected-education"></span>
+            <span id="selected-field"></span>
+        </section>
 
-        </div>
 
         <div class="carousel carousel-dark slide" data-bs-ride="carousel" id="sod-carousel">
             <div class="carousel-inner" style="padding: 0 15%;" id="scientist-of-the-day">
@@ -108,15 +111,24 @@
     </script>
 
     <script>
+
+
         // Prevent submit on form #searchbar
         document.getElementById("searchbar").addEventListener("submit", function (event) {
             event.preventDefault();
-            value = document.querySelector('input').value;
+
+            search = {name: document.querySelector('input').value}
+
+            education = document.getElementById("selected-education").lastChild;
+            if (education != null) { search.education = education.dataset.uri;} else {search.education = "";}
+
+            fields = document.getElementById("selected-field").lastChild;
+            if (fields != null) { search.fields = fields.dataset.uri;} else {search.fields = "";}
 
             // Hide the carousel and show the results, if the search is empty, show the carousel
-            if (value != '') {
+            if (search.name != "" || search.education != "" || search.field != "") {
                 carousel.classList.add('d-none');
-                createSearchResults(value);
+                createSearchResults(search);
             } else {
                 carousel.classList.remove('d-none');
                 document.getElementById('search-results').innerHTML = '';
