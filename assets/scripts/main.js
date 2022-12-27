@@ -57,6 +57,12 @@ async function getLabel(uri) {
  * @returns {object} The list of scientists.
  */
 async function getScientistOfTheDay(limit = 3) {
+
+    // Show loading spinner
+    console.log("Loading...");
+    document.getElementById("search-icon").classList.add("d-none");
+    document.getElementById("loading-spinner").classList.remove("d-none");
+
     var today = new Date();
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
@@ -84,7 +90,10 @@ async function getScientistOfTheDay(limit = 3) {
     LIMIT ${limit}
     `;
 
-    var response = await dps.client().query(query).asJson()
+    let response = await dps.client().query(query).asJson()
+    // Hide loading spinner
+    document.getElementById("search-icon").classList.remove("d-none");
+    document.getElementById("loading-spinner").classList.add("d-none");
     return response.results.bindings.map(cleanObject);
 }
 
@@ -140,7 +149,7 @@ async function searchScientist(search, limit = 50) {
  * @param {number} limit - The number of results to return.
  * @returns {object} The list of scientists.
  */
-async function searchScientistByName(name, limit=50) {
+async function searchScientistByName(name, limit = 50) {
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
@@ -331,7 +340,12 @@ async function createScientistOfTheDay(id = "scientist-of-the-day") {
  * @param {string} id - The ID of the element to append the cards to.
  * @param {number} limit - The number of results to return.
  */
-async function createSearchResults(search, id="search-results", limit=50) {
+async function createSearchResults(search, id = "search-results", limit = 50) {
+
+    // Show loading spinner
+    console.log("Loading...");
+    document.getElementById("search-icon").classList.add("d-none");
+    document.getElementById("loading-spinner").classList.remove("d-none");
 
     let scientists = await searchScientist(search, limit)
     document.getElementById(id).innerHTML = "";
@@ -339,6 +353,11 @@ async function createSearchResults(search, id="search-results", limit=50) {
         let card = createCard(s);
         document.getElementById(id).appendChild(card);
     });
+
+
+    // Hide loading spinner
+    document.getElementById("search-icon").classList.remove("d-none");
+    document.getElementById("loading-spinner").classList.add("d-none");
 }
 
 /**
@@ -353,7 +372,7 @@ function createBadge(text, uri, type) {
     badge.classList.add("badge", "rounded-pill", "m-1", type);
     badge.innerHTML = text;
 
-    if (uri == "") { return badge;}
+    if (uri == "") { return badge; }
 
     // Only if URI exists.
     badge.dataset.uri = uri.split("/").pop();
