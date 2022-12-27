@@ -1,4 +1,5 @@
 var dps = require('dbpedia-sparql-client').default;
+var selectedBadges = [];
 
 /**
  * Clean sparql result to plain javascript objects.
@@ -234,25 +235,26 @@ template = `
     // Add the badges for each field.
     var badges = card.getElementsByClassName("badges")[0];
     object.fields.forEach(field => {
-        var badge = document.createElement("span");
-        badge.classList.add("badge", "rounded-pill", "bg-info", "m-1");
+        let badge = createBadge(field, "field");
+
         // if field is a promise, wait for it to resolve.
         if (field instanceof Promise) {
             field.then(f => badge.innerHTML = f);
             badge.innerHTML = "Loading...";
         } else {badge.innerHTML = field;}
+
         badges.appendChild(badge);
     });
 
     // Add the badges for each education.
     object.education.forEach(edu => {
-        var badge = document.createElement("span");
-        badge.classList.add("badge", "rounded-pill", "bg-success", "m-1");
+        let badge = createBadge("Loading...", "education");
+
         // if edu is a promise, wait for it to resolve.
         if (edu instanceof Promise) {
             edu.then(e => badge.innerHTML = e);
-            badge.innerHTML = "Loading...";
         } else {badge.innerHTML = edu;}
+
         badges.appendChild(badge);
     });
 
@@ -287,4 +289,32 @@ async function createSearchResults(name, id="search-results", limit=50) {
         var card = createCard(s);
         document.getElementById(id).appendChild(card);
     });
+}
+
+/**
+ * Create a badge from given text.
+ * @param {string} text - The text of the badge.
+ * @param {string} id - The ID of the badge.
+ * @param {string} type - The type of the badge.
+ * @returns {Element} The HTML of the badge.
+ */
+function createBadge(text, type) {
+    let badge = document.createElement("span");
+    badge.classList.add("badge", "rounded-pill", "m-1", type);
+    badge.style.textDecoration = "none";
+    badge.style.cursor = "pointer";
+    badge.innerHTML = text;
+    // On click duplicate the badge and add it to the selected badges.
+    badge.onclick = function() {
+        // Check if the badge is already selected.
+        if (selectedBadges.includes(this.innerHTML)) {return;}
+
+        let selected = document.getElementById("selected-badges");
+        let newBadge = this.cloneNode(true);
+        newBadge.onclick = function() {this.remove();}
+
+        selected.appendChild(newBadge);
+        selectedBadges.push(newBadge.innerHTML);
+    }
+    return badge;
 }

@@ -12,7 +12,18 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css">
 </head>
 
-<body onload="createScientistOfTheDay();">
+<style>
+    .field {
+        background-color: var(--bs-cyan);
+        color: white;
+    }
+    .education {
+        background-color: var(--bs-teal);
+        color: white;
+    }
+</style>
+
+<body>
     <!-- Navigation bar -->
     <nav class="navbar navbar-expand-lg mb-5" style="background-color: #6075d4;">
         <div class="container-fluid">
@@ -58,6 +69,11 @@
                 </div>
             </button>
         </form>
+
+        <div class="my-3" id="selected-badges">
+            <span class="text-muted text-center">Tags selected:</span>
+
+        </div>
 
         <div class="carousel carousel-dark slide" data-bs-ride="carousel" id="sod-carousel">
             <div class="carousel-inner" style="padding: 0 15%;" id="scientist-of-the-day">
@@ -114,6 +130,14 @@
             carousel.classList.remove('d-none');
             document.getElementById('search-results').innerHTML = '';
         });
+    </script>
+
+    <script>
+        // On body load create the scientist of the day
+        var body = document.getElementsByTagName('body')[0];
+        body.onload = function () {
+            createScientistOfTheDay();
+        }
     </script>
 
     <script src="./assets/scripts/bundle.js"></script>
