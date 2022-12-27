@@ -1,6 +1,6 @@
 var dps = require('dbpedia-sparql-client').default;
 var selectedBadges = [];
-
+const baseQuery = 
 /**
  * Clean sparql result to plain javascript objects.
  * @param {object} object - The object to clean.
@@ -90,12 +90,14 @@ async function getScientistOfTheDay(limit=3) {
 }
 
 /**
- * Search a scientist by name.
+ * Search a scientist by name, institution and field
  * @param {string} name - The name of the scientist to search.
+ * @param {string} institution - The name of the institution.
+ * @param {string} field - The field
  * @param {number} limit - The number of results to return.
  * @returns {object} The list of scientists.
  */
-async function searchScientist(name, limit=50) {
+async function searchScientist(name, institution,field) {
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
@@ -114,7 +116,45 @@ async function searchScientist(name, limit=50) {
         OPTIONAL {?scientist dbp:almaMater ?education}
         OPTIONAL {?scientist foaf:homepage ?homepage}
         OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
+        FILTER (regex(?name, "${name}", "i"))
+        FILTER(regex(?education,"${institution}"))
+        FILTER(regex(?fields,"${field}"))
+        FILTER(langMatches(lang(?comment), "EN"))
+        FILTER(langMatches(lang(?abstract), "EN"))
+    }
+    ORDER BY DESC(COUNT(?link))
+    LIMIT ${limit}
+    `;
+
+    var response = await dps.client().query(query).asJson()
+    return await response.results.bindings.map(cleanObject);
+}
+
+/**
+ * Search scientists by name.
+ * @param {string} name - The name of the scientist to search.
+ * @param {number} limit - The number of results to return.
+ * @returns {object} The list of scientists.
+ */
+async function searchScientistByName(name, limit=50) {
+    const query = `
+    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
+        (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
+        (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
+    WHERE {
+        ?scientist a dbo:Scientist;
+                foaf:name ?name;
+                rdfs:comment ?comment;
+                dbo:wikiPageWikiLink ?link.
         
+        OPTIONAL {?scientist dbo:abstract ?abstract}
+        OPTIONAL {?scientist dbo:birthDate ?birthdate}
+        OPTIONAL {?scientist dbp:birthDate ?birthdate}
+        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
+        OPTIONAL {?scientist dbp:education ?education}
+        OPTIONAL {?scientist dbp:almaMater ?education}
+        OPTIONAL {?scientist foaf:homepage ?homepage}
+        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
         FILTER (regex(?name, "${name}", "i"))
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
@@ -128,7 +168,7 @@ async function searchScientist(name, limit=50) {
 }
 
 /**
- * Search a scientist by institution
+ * Search scientists by institution
  * @param {string} institution - The name of the institution.
  * @returns {object} The list of scientists.
  */
@@ -161,8 +201,8 @@ async function searchScientistByInstitution(institution) {
 }
 
 /**
- * Search a scientist by field
- * @param {string} field - The name of the field.
+ * Search scientists by field
+ * @param {string} field - The field.
  * @param {number} limit - The number of results to return.
  * @returns {object} The list of scientists.
  */
@@ -283,7 +323,7 @@ async function createScientistOfTheDay(id="scientist-of-the-day") {
  * @param {number} limit - The number of results to return.
  */
 async function createSearchResults(name, id="search-results", limit=50) {
-    var scientists = await searchScientist(name, limit);
+    var scientists = await searchScientistByName(name, limit);
     document.getElementById(id).innerHTML = "";
     scientists.forEach(s => {
         var card = createCard(s);
