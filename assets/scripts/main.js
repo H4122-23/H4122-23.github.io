@@ -19,11 +19,10 @@ function cleanObject(object) {
             value = value.filter((v) => v != "");
             // Transform URIs into labels
             value = value.map(async (v) => {
-                if (!v.startsWith("http")) return v;
-                return await getLabel(v);
+                if (!v.startsWith("http")) return { uri: v, label: v };
+                return await { uri: v, label: getLabel(v) };
             });
         }
-        
         cleanedObject[key] = value;
     });
 
@@ -47,8 +46,9 @@ async function getLabel(uri) {
         <${uri}> rdfs:label ?label.
         FILTER(langMatches(lang(?label), "EN"))
     }`;
-    
+
     var response = await dps.client().query(query).asJson()
+    if (response.results.bindings.length == 0) { return uri; };
     return response.results.bindings[0].label.value;
 }
 
@@ -57,7 +57,7 @@ async function getLabel(uri) {
  * @param {number} limit - The number of results to return.
  * @returns {object} The list of scientists.
  */
-async function getScientistOfTheDay(limit=3) {
+async function getScientistOfTheDay(limit = 3) {
     var today = new Date();
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
@@ -170,9 +170,10 @@ async function searchScientistByName(name, limit=50) {
 /**
  * Search scientists by institution
  * @param {string} institution - The name of the institution.
+ * @param {number} limit - The number of results to return.
  * @returns {object} The list of scientists.
  */
-async function searchScientistByInstitution(institution) {
+async function searchScientistByInstitution(institution, limit = 50) {
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
     (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
@@ -195,6 +196,7 @@ async function searchScientistByInstitution(institution) {
         FILTER(langMatches(lang(?abstract), "EN"))
     }
     ORDER BY DESC(COUNT(?link))
+    LIMIT ${limit}
     `;
     var response = await dps.client().query(query).asJson()
     return await response.results.bindings.map(cleanObject);
@@ -206,7 +208,7 @@ async function searchScientistByInstitution(institution) {
  * @param {number} limit - The number of results to return.
  * @returns {object} The list of scientists.
  */
-async function searchScientistByField(field) {
+async function searchScientistByField(field, limit = 50) {
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
     (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
@@ -229,6 +231,7 @@ async function searchScientistByField(field) {
         FILTER(langMatches(lang(?abstract), "EN"))
     }
     ORDER BY DESC(COUNT(?link))
+    LIMIT ${limit}
     `;
     var response = await dps.client().query(query).asJson()
     return await response.results.bindings.map(cleanObject);
@@ -244,11 +247,11 @@ function createCard(object) {
     // Hash the name to get a unique ID for the card.
     var id = object.name.split(" ").join("-").toLowerCase();
 
-template = `
+    template = `
     <div class="row g-0">
       <a class="col-md-3 m-3" data-bs-toggle="collapse" data-bs-target="#card-details-${id}"
           style="cursor: pointer;">
-          <img src="${ object.thumbnail }" class="img-fluid rounded-start" style="max-height: 15em;">
+          <img src="${object.thumbnail}" class="img-fluid rounded-start" style="max-height: 15em;">
       </a>
       <div class="col-md-8 text-start">
           <div class="card-body">
@@ -263,39 +266,42 @@ template = `
     </div>
   `;
     var card = document.createElement("div");
-    card.classList.add("card", "my-3", "mx-4","shadow-sm");
+    card.classList.add("card", "my-3", "mx-4", "shadow-sm");
 
     card.innerHTML = template;
 
     // Add onerror event to the image.
-    card.getElementsByTagName("img")[0].onerror = function() {
+    card.getElementsByTagName("img")[0].onerror = function () {
         this.src = "./assets/images/place-holder.png"
     }
-    
+
     // Add the badges for each field.
     var badges = card.getElementsByClassName("badges")[0];
     object.fields.forEach(field => {
-        let badge = createBadge(field, "field");
+        field.then(f => {
+            let badge = createBadge("Loading...", f.uri, "field");
 
-        // if field is a promise, wait for it to resolve.
-        if (field instanceof Promise) {
-            field.then(f => badge.innerHTML = f);
-            badge.innerHTML = "Loading...";
-        } else {badge.innerHTML = field;}
+            // if field is a promise, wait for it to resolve.
+            if (f.label instanceof Promise) {
+                f.label.then(l => badge.innerHTML = l);
+            } else { badge.innerHTML = f.label; }
 
-        badges.appendChild(badge);
+            badges.appendChild(badge);
+        });
     });
 
     // Add the badges for each education.
     object.education.forEach(edu => {
-        let badge = createBadge("Loading...", "education");
+        edu.then(e => {
+            let badge = createBadge("Loading...", e.uri, "education");
 
-        // if edu is a promise, wait for it to resolve.
-        if (edu instanceof Promise) {
-            edu.then(e => badge.innerHTML = e);
-        } else {badge.innerHTML = edu;}
+            // if field is a promise, wait for it to resolve.
+            if (e.label instanceof Promise) {
+                e.label.then(l => badge.innerHTML = l);
+            } else { badge.innerHTML = e.label; }
 
-        badges.appendChild(badge);
+            badges.appendChild(badge);
+        });
     });
 
 
@@ -306,11 +312,11 @@ template = `
  * Create the cards for a scientist of the day.
  * @param {string} id - The ID of the element to append the cards to.
  */
-async function createScientistOfTheDay(id="scientist-of-the-day") {
+async function createScientistOfTheDay(id = "scientist-of-the-day") {
     var scientist = await getScientistOfTheDay();
     scientist.forEach((s, i) => {
         var card = createCard(s);
-        if (i == 0) {card.classList.add("active");}
+        if (i == 0) { card.classList.add("active"); }
         card.classList.add("carousel-item"); card.classList.remove("my-3", "mx-4");
         document.getElementById(id).appendChild(card);
     });
@@ -338,22 +344,24 @@ async function createSearchResults(name, id="search-results", limit=50) {
  * @param {string} type - The type of the badge.
  * @returns {Element} The HTML of the badge.
  */
-function createBadge(text, type) {
+function createBadge(text, uri, type) {
     let badge = document.createElement("span");
     badge.classList.add("badge", "rounded-pill", "m-1", type);
     badge.style.textDecoration = "none";
     badge.style.cursor = "pointer";
     badge.innerHTML = text;
+    badge.dataset.uri = uri.split("/").pop();
+
     // On click duplicate the badge and add it to the selected badges.
-    badge.onclick = function() {
+    badge.onclick = function () {
         // Check if the badge is already selected.
-        if (selectedBadges.includes(this.innerHTML)) {return;}
+        if (selectedBadges.includes(this.innerHTML)) { return; }
 
         let selected = document.getElementById("selected-badges");
         let newBadge = this.cloneNode(true);
-        newBadge.onclick = function() {this.remove();}
+        newBadge.onclick = function () { this.remove(); }
 
-        selected.appendChild(newBadge);
+        selected.replaceChild(newBadge, selected.lastChild);
         selectedBadges.push(newBadge.innerHTML);
     }
     return badge;
