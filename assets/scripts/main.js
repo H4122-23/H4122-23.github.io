@@ -108,8 +108,11 @@ async function getScientistOfTheDay(limit = 3) {
 async function searchScientist(search, limit = 50) {
     let filters = ""; // Build the filters dynamically
     Object.entries(search).forEach(([key, value]) => {
-        if (value != "") {
-            filters += `FILTER (regex(?${key}, "${value}", "i"))\n`
+        if (value == "") return;
+        if (key == "education") { 
+            filters += `FILTER (regex(?almaMater, "${value}", "i") || regex(?education, "${value}", "i"))\n`
+        } else {
+            filters += `FILTER (regex(?${key}, "${value}", "i"))\n`;
         }
     });
 
