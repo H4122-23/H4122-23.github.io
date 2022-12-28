@@ -18,11 +18,10 @@ function cleanObject(object) {
             value = value.filter((v) => v != "");
             // Transform URIs into labels
             value = value.map(async (v) => {
-                if (!v.startsWith("http")) return v;
-                return await getLabel(v);
+                if (!v.startsWith("http")) return { uri: "", label: v };
+                return await { uri: v, label: getLabel(v) };
             });
         }
-        
         cleanedObject[key] = value;
     });
 
@@ -46,8 +45,9 @@ async function getLabel(uri) {
         <${uri}> rdfs:label ?label.
         FILTER(langMatches(lang(?label), "EN"))
     }`;
-    
+
     var response = await dps.client().query(query).asJson()
+    if (response.results.bindings.length == 0) { return uri; };
     return response.results.bindings[0].label.value;
 }
 
@@ -56,7 +56,13 @@ async function getLabel(uri) {
  * @param {number} limit - The number of results to return.
  * @returns {object} The list of scientists.
  */
-async function getScientistOfTheDay(limit=3) {
+async function getScientistOfTheDay(limit = 3) {
+
+    // Show loading spinner
+    console.log("Loading...");
+    document.getElementById("search-icon").classList.add("d-none");
+    document.getElementById("loading-spinner").classList.remove("d-none");
+
     var today = new Date();
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
@@ -80,20 +86,36 @@ async function getScientistOfTheDay(limit=3) {
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
     }
+    ORDER BY DESC(COUNT(?link))
     LIMIT ${limit}
     `;
 
-    var response = await dps.client().query(query).asJson()
+    let response = await dps.client().query(query).asJson()
+    // Hide loading spinner
+    document.getElementById("search-icon").classList.remove("d-none");
+    document.getElementById("loading-spinner").classList.add("d-none");
     return response.results.bindings.map(cleanObject);
 }
 
 /**
- * Search a scientist by name.
+ * Search a scientist by name, institution and field
  * @param {string} name - The name of the scientist to search.
+ * @param {string} institution - The name of the institution.
+ * @param {string} field - The field
  * @param {number} limit - The number of results to return.
  * @returns {object} The list of scientists.
  */
-async function searchScientist(name, limit=50) {
+async function searchScientist(search, limit = 50) {
+    let filters = ""; // Build the filters dynamically
+    Object.entries(search).forEach(([key, value]) => {
+        if (value == "") return;
+        if (key == "education") { 
+            filters += `FILTER (regex(?almaMater, "${value}", "i") || regex(?education, "${value}", "i"))\n`
+        } else {
+            filters += `FILTER (regex(?${key}, "${value}", "i"))\n`;
+        }
+    });
+
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
@@ -112,17 +134,125 @@ async function searchScientist(name, limit=50) {
         OPTIONAL {?scientist dbp:almaMater ?education}
         OPTIONAL {?scientist foaf:homepage ?homepage}
         OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        
-        FILTER (regex(?name, "${name}", "i"))
+        ${filters}
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
     }
+    ORDER BY DESC(COUNT(?link))
     LIMIT ${limit}
     `;
 
     var response = await dps.client().query(query).asJson()
     return await response.results.bindings.map(cleanObject);
 }
+
+/**
+ * Search scientists by name.
+ * @param {string} name - The name of the scientist to search.
+ * @param {number} limit - The number of results to return.
+ * @returns {object} The list of scientists.
+ */
+async function searchScientistByName(name, limit = 50) {
+    const query = `
+    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
+        (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
+        (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
+    WHERE {
+        ?scientist a dbo:Scientist;
+                foaf:name ?name;
+                rdfs:comment ?comment;
+                dbo:wikiPageWikiLink ?link.
+        
+        OPTIONAL {?scientist dbo:abstract ?abstract}
+        OPTIONAL {?scientist dbo:birthDate ?birthdate}
+        OPTIONAL {?scientist dbp:birthDate ?birthdate}
+        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
+        OPTIONAL {?scientist dbp:education ?education}
+        OPTIONAL {?scientist dbp:almaMater ?education}
+        OPTIONAL {?scientist foaf:homepage ?homepage}
+        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
+        FILTER (regex(?name, "${name}", "i"))
+        FILTER(langMatches(lang(?comment), "EN"))
+        FILTER(langMatches(lang(?abstract), "EN"))
+    }
+    ORDER BY DESC(COUNT(?link))
+    LIMIT ${limit}
+    `;
+
+    var response = await dps.client().query(query).asJson()
+    return await response.results.bindings.map(cleanObject);
+}
+
+/**
+ * Search scientists by institution
+ * @param {string} institution - The name of the institution.
+ * @param {number} limit - The number of results to return.
+ * @returns {object} The list of scientists.
+ */
+async function searchScientistByInstitution(institution, limit = 50) {
+    const query = `
+    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
+    (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
+    (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
+    WHERE {
+        ?scientist a dbo:Scientist;
+                foaf:name ?name;
+                rdfs:comment ?comment;
+                dbo:wikiPageWikiLink ?link.
+        OPTIONAL {?scientist dbo:abstract ?abstract}
+        OPTIONAL {?scientist dbo:birthDate ?birthdate}
+        OPTIONAL {?scientist dbp:birthDate ?birthdate}
+        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
+        OPTIONAL {?scientist dbp:education ?education}
+        OPTIONAL {?scientist dbp:almaMater ?education}
+        OPTIONAL {?scientist foaf:homepage ?homepage}
+        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
+        FILTER(regex(?education,"${institution}")||regex(?almaMater, "${institution}", "i")) 
+        FILTER(langMatches(lang(?comment), "EN"))
+        FILTER(langMatches(lang(?abstract), "EN"))
+    }
+    ORDER BY DESC(COUNT(?link))
+    LIMIT ${limit}
+    `;
+    var response = await dps.client().query(query).asJson()
+    return await response.results.bindings.map(cleanObject);
+}
+
+/**
+ * Search scientists by field
+ * @param {string} field - The field.
+ * @param {number} limit - The number of results to return.
+ * @returns {object} The list of scientists.
+ */
+async function searchScientistByField(field, limit = 50) {
+    const query = `
+    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
+    (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
+    (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
+    WHERE {
+        ?scientist a dbo:Scientist;
+                foaf:name ?name;
+                rdfs:comment ?comment;
+                dbo:wikiPageWikiLink ?link.
+        OPTIONAL {?scientist dbo:abstract ?abstract}
+        OPTIONAL {?scientist dbo:birthDate ?birthdate}
+        OPTIONAL {?scientist dbp:birthDate ?birthdate}
+        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
+        OPTIONAL {?scientist dbp:education ?education}
+        OPTIONAL {?scientist dbp:almaMater ?education}
+        OPTIONAL {?scientist foaf:homepage ?homepage}
+        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
+        FILTER(regex(?fields,"${field}"))
+        FILTER(langMatches(lang(?comment), "EN"))
+        FILTER(langMatches(lang(?abstract), "EN"))
+    }
+    ORDER BY DESC(COUNT(?link))
+    LIMIT ${limit}
+    `;
+    var response = await dps.client().query(query).asJson()
+    return await response.results.bindings.map(cleanObject);
+}
+
 
 /**
  * Create a card for a scientist.
@@ -133,11 +263,11 @@ function createCard(object) {
     // Hash the name to get a unique ID for the card.
     var id = object.name.split(" ").join("-").toLowerCase();
 
-template = `
+    template = `
     <div class="row g-0">
       <a class="col-md-3 m-3" data-bs-toggle="collapse" data-bs-target="#card-details-${id}"
           style="cursor: pointer;">
-          <img src="${ object.thumbnail }" class="img-fluid rounded-start" style="max-height: 15em;">
+          <img src="${object.thumbnail}" class="img-fluid rounded-start" style="max-height: 15em;">
       </a>
       <div class="col-md-8 text-start">
           <div class="card-body">
@@ -152,38 +282,42 @@ template = `
     </div>
   `;
     var card = document.createElement("div");
-    card.classList.add("card", "my-3", "mx-4","shadow-sm");
+    card.classList.add("card", "my-3", "mx-4", "shadow-sm");
 
     card.innerHTML = template;
 
     // Add onerror event to the image.
-    card.getElementsByTagName("img")[0].onerror = function() {
+    card.getElementsByTagName("img")[0].onerror = function () {
         this.src = "./assets/images/place-holder.png"
     }
-    
+
     // Add the badges for each field.
     var badges = card.getElementsByClassName("badges")[0];
     object.fields.forEach(field => {
-        var badge = document.createElement("span");
-        badge.classList.add("badge", "rounded-pill", "bg-info", "m-1");
-        // if field is a promise, wait for it to resolve.
-        if (field instanceof Promise) {
-            field.then(f => badge.innerHTML = f);
-            badge.innerHTML = "Loading...";
-        } else {badge.innerHTML = field;}
-        badges.appendChild(badge);
+        field.then(f => {
+            let badge = createBadge("Loading...", f.uri, "field");
+
+            // if field is a promise, wait for it to resolve.
+            if (f.label instanceof Promise) {
+                f.label.then(l => badge.innerHTML = l);
+            } else { badge.innerHTML = f.label; }
+
+            badges.appendChild(badge);
+        });
     });
 
     // Add the badges for each education.
     object.education.forEach(edu => {
-        var badge = document.createElement("span");
-        badge.classList.add("badge", "rounded-pill", "bg-success", "m-1");
-        // if edu is a promise, wait for it to resolve.
-        if (edu instanceof Promise) {
-            edu.then(e => badge.innerHTML = e);
-            badge.innerHTML = "Loading...";
-        } else {badge.innerHTML = edu;}
-        badges.appendChild(badge);
+        edu.then(e => {
+            let badge = createBadge("Loading...", e.uri, "education");
+
+            // if field is a promise, wait for it to resolve.
+            if (e.label instanceof Promise) {
+                e.label.then(l => badge.innerHTML = l);
+            } else { badge.innerHTML = e.label; }
+
+            badges.appendChild(badge);
+        });
     });
 
 
@@ -194,11 +328,11 @@ template = `
  * Create the cards for a scientist of the day.
  * @param {string} id - The ID of the element to append the cards to.
  */
-async function createScientistOfTheDay(id="scientist-of-the-day") {
+async function createScientistOfTheDay(id = "scientist-of-the-day") {
     var scientist = await getScientistOfTheDay();
     scientist.forEach((s, i) => {
         var card = createCard(s);
-        if (i == 0) {card.classList.add("active");}
+        if (i == 0) { card.classList.add("active"); }
         card.classList.add("carousel-item"); card.classList.remove("my-3", "mx-4");
         document.getElementById(id).appendChild(card);
     });
@@ -207,14 +341,55 @@ async function createScientistOfTheDay(id="scientist-of-the-day") {
 /**
  * Create the cards for the search results.
  * @param {string} id - The ID of the element to append the cards to.
- * @param {string} name - The name of the scientist to search.
  * @param {number} limit - The number of results to return.
  */
-async function createSearchResults(name, id="search-results", limit=50) {
-    var scientists = await searchScientist(name, limit);
+async function createSearchResults(search, id = "search-results", limit = 50) {
+
+    // Show loading spinner
+    console.log("Loading...");
+    document.getElementById("search-icon").classList.add("d-none");
+    document.getElementById("loading-spinner").classList.remove("d-none");
+
+    let scientists = await searchScientist(search, limit)
     document.getElementById(id).innerHTML = "";
     scientists.forEach(s => {
-        var card = createCard(s);
+        let card = createCard(s);
         document.getElementById(id).appendChild(card);
     });
+
+
+    // Hide loading spinner
+    document.getElementById("search-icon").classList.remove("d-none");
+    document.getElementById("loading-spinner").classList.add("d-none");
+}
+
+/**
+ * Create a badge from given text.
+ * @param {string} text - The text of the badge.
+ * @param {string} id - The ID of the badge.
+ * @param {string} type - The type of the badge.
+ * @returns {Element} The HTML of the badge.
+ */
+function createBadge(text, uri, type) {
+    let badge = document.createElement("span");
+    badge.classList.add("badge", "rounded-pill", "m-1", type);
+    badge.innerHTML = text;
+
+    if (uri == "") { return badge; }
+
+    // Only if URI exists.
+    badge.dataset.uri = uri.split("/").pop();
+    badge.style.cursor = "pointer";
+
+    // On click duplicate the badge and add it to the selected badges.
+    badge.onclick = function () {
+
+        let selected = document.getElementById(`selected-${type}`);
+        let newBadge = this.cloneNode(true);
+        newBadge.onclick = function () { this.remove(); }
+
+        selected.innerHTML = "";
+        selected.appendChild(newBadge);
+    }
+    return badge;
 }

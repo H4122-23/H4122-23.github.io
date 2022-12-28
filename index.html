@@ -12,7 +12,19 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css">
 </head>
 
-<body onload="createScientistOfTheDay();">
+<style>
+    .field {
+        background-color: var(--bs-cyan);
+        color: white;
+    }
+
+    .education {
+        background-color: var(--bs-teal);
+        color: white;
+    }
+</style>
+
+<body>
     <!-- Navigation bar -->
     <nav class="navbar navbar-expand-lg mb-5" style="background-color: #6075d4;">
         <div class="container-fluid">
@@ -47,7 +59,7 @@
     <section class="container text-center">
 
         <!-- Search bar -->
-        <h1>Scienf'IF</h1>
+        <h1>Scient'IF</h1>
         <form class="d-flex my-5 w-75 mx-auto" id="searchbar">
             <input class="form-control me-1" type="search" placeholder="Search" aria-label="Search">
             <button class="btn btn-primary">
@@ -58,6 +70,13 @@
                 </div>
             </button>
         </form>
+
+        <section class="m-4">
+            <span class="text-muted text-center">Selected tags: </span>
+            <span id="selected-education"></span>
+            <span id="selected-field"></span>
+        </section>
+
 
         <div class="carousel carousel-dark slide" data-bs-ride="carousel" id="sod-carousel">
             <div class="carousel-inner" style="padding: 0 15%;" id="scientist-of-the-day">
@@ -95,16 +114,24 @@
         // Prevent submit on form #searchbar
         document.getElementById("searchbar").addEventListener("submit", function (event) {
             event.preventDefault();
-            value = document.querySelector('input').value;
+
+            search = {name: document.querySelector('input').value}
+
+            education = document.getElementById("selected-education").lastChild;
+            if (education != null) { search.education = education.dataset.uri;} else {search.education = "";}
+
+            fields = document.getElementById("selected-field").lastChild;
+            if (fields != null) { search.fields = fields.dataset.uri;} else {search.fields = "";}
 
             // Hide the carousel and show the results, if the search is empty, show the carousel
-            if (value != '') {
+            if (search.name != "" || search.education != "" || search.field != "") {
                 carousel.classList.add('d-none');
-                createSearchResults(value);
+                createSearchResults(search);
             } else {
                 carousel.classList.remove('d-none');
                 document.getElementById('search-results').innerHTML = '';
             }
+
         });
     </script>
 
@@ -114,6 +141,14 @@
             carousel.classList.remove('d-none');
             document.getElementById('search-results').innerHTML = '';
         });
+    </script>
+
+    <script>
+        // On body load create the scientist of the day
+        var body = document.getElementsByTagName('body')[0];
+        body.onload = function () {
+            createScientistOfTheDay();
+        }
     </script>
 
     <script src="./assets/scripts/bundle.js"></script>
