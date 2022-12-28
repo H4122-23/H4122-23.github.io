@@ -207,7 +207,7 @@ async function searchScientistByInstitution(institution, limit = 50) {
         OPTIONAL {?scientist dbp:almaMater ?education}
         OPTIONAL {?scientist foaf:homepage ?homepage}
         OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER(regex(?education,"${institution}"))
+        FILTER(regex(?education,"${institution}")||regex(?almaMater, "${institution}", "i")) 
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
     }
