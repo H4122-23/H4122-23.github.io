@@ -107,15 +107,30 @@ async function getScientistOfTheDay(limit = 3) {
  */
 async function searchScientist(search, limit = 50) {
     let filters = ""; // Build the filters dynamically
-    Object.entries(search).forEach(([key, value]) => {
-        if (value == "") return;
-        if (key == "education") { 
-            filters += `FILTER (regex(?almaMater, "${value}", "i") || regex(?education, "${value}", "i"))\n`
-        } else {
-            filters += `FILTER (regex(?${key}, "${value}", "i"))\n`;
-        }
-    });
+    filters += `FILTER (regex(?name, "${search.name}", "i"))\n`;
 
+    let fieldFilter = "";
+    if(search.fields.length>0){
+        fieldFilter = "VALUES ?fields {";
+        for(let i = 0; i<search.fields.length; i++)
+        {
+            fieldFilter += `dbr:${search.fields[i]} `;
+        }
+        fieldFilter+= '}\n';
+    }
+    console.log(fieldFilter);
+    filters += fieldFilter;
+    // Object.entries(search).forEach(([key, value]) => {
+    //     console.log(key)
+    //     console.log(value)
+    //     if (value == "") return;
+    //     if (key == "education") { 
+    //         filters += `FILTER (regex(?almaMater, "${value}", "i") || regex(?education, "${value}", "i"))\n`
+    //     } else {
+    //         filters += `FILTER (regex(?${key}, "${value}", "i"))\n`;
+    //     }
+    // });
+    console.log(filters)
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
@@ -355,7 +370,6 @@ async function addFieldNames(id = "fields"){
         sel.add(newOpt);
     });
 
-    console.log(sel);
     document.getElementById("multiSelect").append(sel);
     // const sel = document.createElement("div");
     // sel.innerHTML = `
