@@ -339,6 +339,32 @@ async function createScientistOfTheDay(id = "scientist-of-the-day") {
 }
 
 /**
+ * Query top 20 scientific fields and add them to the multiselect filter
+ * @param {string} id - The ID of the element to append the cards to.
+ */
+async function addFieldNames(id = "fields"){
+    const sel = document.createElement("select");
+    sel.name = "field";
+    sel.id = "fields";
+    sel.multiple = true;
+    var fieldNames = await getTopFields();
+    fieldNames.forEach((fn, i) => {
+        const newOpt = document.createElement("option");
+        newOpt.value = i;
+        newOpt.text = fn;
+        sel.add(newOpt);
+    });
+
+    console.log(sel);
+    document.getElementById("multiSelect").append(sel);
+    // const sel = document.createElement("div");
+    // sel.innerHTML = `
+    // <select name="field" id="fields" multiple>
+    // </select>
+    // `
+}
+
+/**
  * Create the cards for the search results.
  * @param {string} id - The ID of the element to append the cards to.
  * @param {number} limit - The number of results to return.
@@ -392,4 +418,25 @@ function createBadge(text, uri, type) {
         selected.appendChild(newBadge);
     }
     return badge;
+}
+
+async function getTopFields() {
+
+    const query = `
+        SELECT ?fields COUNT(?scientist) as ?nbScientists WHERE {
+            ?scientist a dbo:Scientist;
+            dbo:academicDiscipline ?fields
+        }
+        ORDER BY DESC(?nbScientists)
+        LIMIT 20
+    `;
+
+    let response = await dps.client().query(query).asJson();
+
+    const fieldNames =[];
+    for(let pair of response.results.bindings){
+        fieldNames.push(pair.fields.value.substr(28))
+    }
+    
+    return fieldNames;
 }
