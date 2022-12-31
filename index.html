@@ -124,13 +124,24 @@
         document.getElementById("searchbar").addEventListener("submit", function (event) {
             event.preventDefault();
 
+            // get search word
             search = {name: document.querySelector('input').value}
 
-            education = document.getElementById("selected-education").lastChild;
-            if (education != null) { search.education = education.dataset.uri;} else {search.education = "";}
+            // get selected fields
+            var selected = [];
 
-            fields = document.getElementById("selected-field").lastChild;
-            if (fields != null) { search.fields = fields.dataset.uri;} else {search.fields = "";}
+            for(var option of document.getElementById("fields").options){
+                if(option.selected){
+                    selected.push(option.text)
+                }
+            }
+            search.fields = selected;
+            console.log(search);
+            // education = document.getElementById("selected-education").lastChild;
+            // if (education != null) { search.education = education.dataset.uri;} else {search.education = "";}
+
+            // fields = document.getElementById("selected-field").lastChild;
+            // if (fields != null) { search.fields = fields.dataset.uri;} else {search.fields = "";}
 
             // Hide the carousel and show the results, if the search is empty, show the carousel
             if (search.name != "" || search.education != "" || search.field != "") {
