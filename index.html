@@ -134,17 +134,20 @@
                     selected.push(option.text)
                 }
             }
+            fieldsTag = document.getElementById("selected-field").lastChild;
+            if (fieldsTag != null) selected.push(fieldsTag.dataset.uri);
             search.fields = selected;
-            console.log(search);
-            // education = document.getElementById("selected-education").lastChild;
-            // if (education != null) { search.education = education.dataset.uri;} else {search.education = "";}
 
-            // fields = document.getElementById("selected-field").lastChild;
-            // if (fields != null) { search.fields = fields.dataset.uri;} else {search.fields = "";}
+            // get selected institution
+            education = document.getElementById("selected-education").lastChild;
+            if (education != null) { search.education = education.dataset.uri;} else {search.education = "";}
+
+            
 
             // Hide the carousel and show the results, if the search is empty, show the carousel
             if (search.name != "" || search.education != "" || search.field != "") {
                 carousel.classList.add('d-none');
+                console.log("Search for: ", search);
                 createSearchResults(search);
             } else {
                 carousel.classList.remove('d-none');
