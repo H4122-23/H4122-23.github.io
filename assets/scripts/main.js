@@ -64,6 +64,8 @@ async function getScientistOfTheDay(limit = 3) {
     document.getElementById("loading-spinner").classList.remove("d-none");
 
     var today = new Date();
+    let date= today.getDate().toString().padStart(2,'0'); //01,02,03,...
+    let month = (today.getMonth()+1).toString().padStart(2,'0');
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
@@ -82,14 +84,13 @@ async function getScientistOfTheDay(limit = 3) {
         OPTIONAL {?scientist dbp:almaMater ?education}
         OPTIONAL {?scientist foaf:homepage ?homepage}
         OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER (?birthdate != "null"^^xsd:date && SUBSTR(STR(?birthdate), 6, 2) = "${today.getMonth() + 1}" && SUBSTR(STR(?birthdate), 9, 2) = "${today.getDate()}")
+        FILTER (?birthdate != "null"^^xsd:date && SUBSTR(STR(?birthdate), 6, 2) = "${date}" && SUBSTR(STR(?birthdate), 9, 2) = "${month}")
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
     }
     ORDER BY DESC(COUNT(?link))
     LIMIT ${limit}
     `;
-
     let response = await dps.client().query(query).asJson()
     // Hide loading spinner
     document.getElementById("search-icon").classList.remove("d-none");
