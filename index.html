@@ -10,6 +10,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/habibmhamadi/multi-select-tag/dist/css/multi-select-tag.css">
+    <script src="https://cdn.jsdelivr.net/gh/habibmhamadi/multi-select-tag/dist/js/multi-select-tag.js"></script>
 </head>
 
 <style>
@@ -60,16 +62,23 @@
 
         <!-- Search bar -->
         <h1>Scient'IF</h1>
-        <form class="d-flex my-5 w-75 mx-auto" id="searchbar">
-            <input class="form-control me-1" type="search" placeholder="Search" aria-label="Search">
-            <button class="btn btn-primary">
-                <i class="bi bi-search" id="search-icon"></i>
-                <div class="spinner-border d-none" id="loading-spinner" role="status"
-                    style="width: 1rem; height: 1rem;">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </button>
-        </form>
+        <div style="display:flex; flex-direction: column; justify-content: center; align-items: center">
+            <form class="d-flex my-5 w-75 mx-auto" id="searchbar">
+                <input class="form-control me-1" type="search" placeholder="Search" aria-label="Search">
+                <button class="btn btn-primary">
+                    <i class="bi bi-search" id="search-icon"></i>
+                    <div class="spinner-border d-none" id="loading-spinner" role="status"
+                        style="width: 1rem; height: 1rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </button>
+            </form>
+        </div>
+
+        <label>Selected Fields</label>
+
+        <div id ="multiSelect" style="max-width: 75%;margin: auto;"  >
+        </div>
 
         <section class="m-4">
             <span class="text-muted text-center">Selected tags: </span>
@@ -95,7 +104,6 @@
         <section id="search-results">
 
         </section>
-
     </section>
 
 
@@ -115,23 +123,36 @@
         document.getElementById("searchbar").addEventListener("submit", function (event) {
             event.preventDefault();
 
+            // get search word
             search = {name: document.querySelector('input').value}
 
+            // get selected fields
+            var selected = [];
+
+            for(var option of document.getElementById("fields").options){
+                if(option.selected){
+                    selected.push(option.text)
+                }
+            }
+            fieldsTag = document.getElementById("selected-field").lastChild;
+            if (fieldsTag != null) selected.push(fieldsTag.dataset.uri);
+            search.fields = selected;
+
+            // get selected institution
             education = document.getElementById("selected-education").lastChild;
             if (education != null) { search.education = education.dataset.uri;} else {search.education = "";}
 
-            fields = document.getElementById("selected-field").lastChild;
-            if (fields != null) { search.fields = fields.dataset.uri;} else {search.fields = "";}
+            
 
             // Hide the carousel and show the results, if the search is empty, show the carousel
             if (search.name != "" || search.education != "" || search.field != "") {
                 carousel.classList.add('d-none');
+                console.log("Search for: ", search);
                 createSearchResults(search);
             } else {
                 carousel.classList.remove('d-none');
                 document.getElementById('search-results').innerHTML = '';
             }
-
         });
     </script>
 
@@ -146,8 +167,10 @@
     <script>
         // On body load create the scientist of the day
         var body = document.getElementsByTagName('body')[0];
-        body.onload = function () {
+        body.onload = async function () {
             createScientistOfTheDay();
+            await addFieldNames();
+            new MultiSelectTag('fields')
         }
     </script>
 

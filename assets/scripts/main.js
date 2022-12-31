@@ -64,6 +64,8 @@ async function getScientistOfTheDay(limit = 3) {
     document.getElementById("loading-spinner").classList.remove("d-none");
 
     var today = new Date();
+    let date= today.getDate().toString().padStart(2,'0'); //01,02,03,...
+    let month = (today.getMonth()+1).toString().padStart(2,'0');
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
@@ -82,14 +84,13 @@ async function getScientistOfTheDay(limit = 3) {
         OPTIONAL {?scientist dbp:almaMater ?education}
         OPTIONAL {?scientist foaf:homepage ?homepage}
         OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER (?birthdate != "null"^^xsd:date && SUBSTR(STR(?birthdate), 6, 2) = "${today.getMonth() + 1}" && SUBSTR(STR(?birthdate), 9, 2) = "${today.getDate()}")
+        FILTER (?birthdate != "null"^^xsd:date && SUBSTR(STR(?birthdate), 6, 2) = "${date}" && SUBSTR(STR(?birthdate), 9, 2) = "${month}")
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
     }
     ORDER BY DESC(COUNT(?link))
     LIMIT ${limit}
     `;
-
     let response = await dps.client().query(query).asJson()
     // Hide loading spinner
     document.getElementById("search-icon").classList.remove("d-none");
@@ -107,6 +108,7 @@ async function getScientistOfTheDay(limit = 3) {
  */
 async function searchScientist(search, limit = 50) {
     let filters = ""; // Build the filters dynamically
+    filters += `FILTER (regex(?name, "${search.name}", "i"))\n`;
     Object.entries(search).forEach(([key, value]) => {
         if (value == "") return;
         if (key == "education") { 
@@ -115,7 +117,6 @@ async function searchScientist(search, limit = 50) {
             filters += `FILTER (regex(?${key}, "${value}", "i"))\n`;
         }
     });
-
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
@@ -339,6 +340,31 @@ async function createScientistOfTheDay(id = "scientist-of-the-day") {
 }
 
 /**
+ * Query top 20 scientific fields and add them to the multiselect filter
+ * @param {string} id - The ID of the element to append the cards to.
+ */
+async function addFieldNames(id = "fields"){
+    const sel = document.createElement("select");
+    sel.name = "field";
+    sel.id = "fields";
+    sel.multiple = true;
+    var fieldNames = await getTopFields();
+    fieldNames.forEach((fn, i) => {
+        const newOpt = document.createElement("option");
+        newOpt.value = i;
+        newOpt.text = fn;
+        sel.add(newOpt);
+    });
+
+    document.getElementById("multiSelect").append(sel);
+    // const sel = document.createElement("div");
+    // sel.innerHTML = `
+    // <select name="field" id="fields" multiple>
+    // </select>
+    // `
+}
+
+/**
  * Create the cards for the search results.
  * @param {string} id - The ID of the element to append the cards to.
  * @param {number} limit - The number of results to return.
@@ -392,4 +418,25 @@ function createBadge(text, uri, type) {
         selected.appendChild(newBadge);
     }
     return badge;
+}
+
+async function getTopFields() {
+
+    const query = `
+        SELECT ?fields COUNT(?scientist) as ?nbScientists WHERE {
+            ?scientist a dbo:Scientist;
+            dbo:academicDiscipline ?fields
+        }
+        ORDER BY DESC(?nbScientists)
+        LIMIT 20
+    `;
+
+    let response = await dps.client().query(query).asJson();
+
+    const fieldNames =[];
+    for(let pair of response.results.bindings){
+        fieldNames.push(pair.fields.value.substr(28))
+    }
+    
+    return fieldNames;
 }
