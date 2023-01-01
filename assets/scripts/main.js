@@ -12,7 +12,7 @@ function cleanObject(object) {
             value = new Date(value);
         }
         // Break fields and education into arrays and transform URIs into labels
-        if (key == "fields" || key == "education") {
+        if (key == "fields" || key == "education"||key == "awards" || key == "contributions") {
             value = value.split("; ");
             // Remove empty values
             value = value.filter((v) => v != "");
@@ -69,7 +69,10 @@ async function getScientistOfTheDay(limit = 3) {
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
-        (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
+        (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) 
+        (GROUP_CONCAT( DISTINCT ?contributions; separator = "; ") AS ?contributions)  
+        (GROUP_CONCAT( DISTINCT ?awards; separator = "; ") AS ?awards)
+        ?homepage ?thumbnail
     WHERE {
         ?scientist a dbo:Scientist;
                 foaf:name ?name;
@@ -82,6 +85,8 @@ async function getScientistOfTheDay(limit = 3) {
         OPTIONAL {?scientist dbo:academicDiscipline ?fields}
         OPTIONAL {?scientist dbp:education ?education}
         OPTIONAL {?scientist dbp:almaMater ?education}
+        OPTIONAL {?scientist dbo:knownFor ?contributions}
+        OPTIONAL {?scientist dbo:award ?awards}
         OPTIONAL {?scientist foaf:homepage ?homepage}
         OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
         FILTER (?birthdate != "null"^^xsd:date && SUBSTR(STR(?birthdate), 6, 2) = "${date}" && SUBSTR(STR(?birthdate), 9, 2) = "${month}")
@@ -120,19 +125,23 @@ async function searchScientist(search, limit = 50) {
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
         (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
-        (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
+        (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) 
+        (GROUP_CONCAT( DISTINCT ?contributions; separator = "; ") AS ?contributions)  
+        (GROUP_CONCAT( DISTINCT ?awards; separator = "; ") AS ?awards)
+        ?homepage ?thumbnail
     WHERE {
         ?scientist a dbo:Scientist;
                 foaf:name ?name;
                 rdfs:comment ?comment;
                 dbo:wikiPageWikiLink ?link.
-        
         OPTIONAL {?scientist dbo:abstract ?abstract}
         OPTIONAL {?scientist dbo:birthDate ?birthdate}
         OPTIONAL {?scientist dbp:birthDate ?birthdate}
         OPTIONAL {?scientist dbo:academicDiscipline ?fields}
         OPTIONAL {?scientist dbp:education ?education}
         OPTIONAL {?scientist dbp:almaMater ?education}
+        OPTIONAL {?scientist dbo:knownFor ?contributions}
+        OPTIONAL {?scientist dbo:award ?awards}
         OPTIONAL {?scientist foaf:homepage ?homepage}
         OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
         ${filters}
@@ -147,113 +156,26 @@ async function searchScientist(search, limit = 50) {
     return await response.results.bindings.map(cleanObject);
 }
 
-/**
- * Search scientists by name.
- * @param {string} name - The name of the scientist to search.
- * @param {number} limit - The number of results to return.
- * @returns {object} The list of scientists.
- */
-async function searchScientistByName(name, limit = 50) {
-    const query = `
-    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
-        (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
-        (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
-    WHERE {
-        ?scientist a dbo:Scientist;
-                foaf:name ?name;
-                rdfs:comment ?comment;
-                dbo:wikiPageWikiLink ?link.
-        
-        OPTIONAL {?scientist dbo:abstract ?abstract}
-        OPTIONAL {?scientist dbo:birthDate ?birthdate}
-        OPTIONAL {?scientist dbp:birthDate ?birthdate}
-        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
-        OPTIONAL {?scientist dbp:education ?education}
-        OPTIONAL {?scientist dbp:almaMater ?education}
-        OPTIONAL {?scientist foaf:homepage ?homepage}
-        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER (regex(?name, "${name}", "i"))
-        FILTER(langMatches(lang(?comment), "EN"))
-        FILTER(langMatches(lang(?abstract), "EN"))
-    }
-    ORDER BY DESC(COUNT(?link))
-    LIMIT ${limit}
-    `;
-
-    var response = await dps.client().query(query).asJson()
-    return await response.results.bindings.map(cleanObject);
-}
 
 /**
- * Search scientists by institution
- * @param {string} institution - The name of the institution.
- * @param {number} limit - The number of results to return.
- * @returns {object} The list of scientists.
+ *  Scientist's contributions and awards query
  */
-async function searchScientistByInstitution(institution, limit = 50) {
+async function searchContributions(name){
     const query = `
-    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
-    (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
-    (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
+    SELECT DISTINCT (GROUP_CONCAT( DISTINCT ?contributions; separator = "; ") AS ?contributions)  
+    (GROUP_CONCAT( DISTINCT ?awards; separator = "; ") AS ?awards)
     WHERE {
         ?scientist a dbo:Scientist;
-                foaf:name ?name;
-                rdfs:comment ?comment;
-                dbo:wikiPageWikiLink ?link.
-        OPTIONAL {?scientist dbo:abstract ?abstract}
-        OPTIONAL {?scientist dbo:birthDate ?birthdate}
-        OPTIONAL {?scientist dbp:birthDate ?birthdate}
-        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
-        OPTIONAL {?scientist dbp:education ?education}
-        OPTIONAL {?scientist dbp:almaMater ?education}
-        OPTIONAL {?scientist foaf:homepage ?homepage}
-        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER(regex(?education,"${institution}")||regex(?almaMater, "${institution}", "i")) 
-        FILTER(langMatches(lang(?comment), "EN"))
-        FILTER(langMatches(lang(?abstract), "EN"))
+                foaf:name "${name}"@en.
+        OPTIONAL {?scientist dbo:knownFor ?contributions}
+        OPTIONAL {?scientist dbo:award ?awards}
+
     }
-    ORDER BY DESC(COUNT(?link))
-    LIMIT ${limit}
     `;
-    var response = await dps.client().query(query).asJson()
+    console.log(query);
+    var response = await dps.client().query(query).asJson();
     return await response.results.bindings.map(cleanObject);
 }
-
-/**
- * Search scientists by field
- * @param {string} field - The field.
- * @param {number} limit - The number of results to return.
- * @returns {object} The list of scientists.
- */
-async function searchScientistByField(field, limit = 50) {
-    const query = `
-    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
-    (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
-    (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
-    WHERE {
-        ?scientist a dbo:Scientist;
-                foaf:name ?name;
-                rdfs:comment ?comment;
-                dbo:wikiPageWikiLink ?link.
-        OPTIONAL {?scientist dbo:abstract ?abstract}
-        OPTIONAL {?scientist dbo:birthDate ?birthdate}
-        OPTIONAL {?scientist dbp:birthDate ?birthdate}
-        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
-        OPTIONAL {?scientist dbp:education ?education}
-        OPTIONAL {?scientist dbp:almaMater ?education}
-        OPTIONAL {?scientist foaf:homepage ?homepage}
-        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER(regex(?fields,"${field}"))
-        FILTER(langMatches(lang(?comment), "EN"))
-        FILTER(langMatches(lang(?abstract), "EN"))
-    }
-    ORDER BY DESC(COUNT(?link))
-    LIMIT ${limit}
-    `;
-    var response = await dps.client().query(query).asJson()
-    return await response.results.bindings.map(cleanObject);
-}
-
 
 /**
  * Create a card for a scientist.
@@ -263,7 +185,6 @@ async function searchScientistByField(field, limit = 50) {
 function createCard(object) {
     // Hash the name to get a unique ID for the card.
     var id = object.name.split(" ").join("-").toLowerCase();
-
     template = `
     <div class="row g-0">
       <a class="col-md-3 m-3" data-bs-toggle="collapse" data-bs-target="#card-details-${id}"
@@ -279,7 +200,7 @@ function createCard(object) {
       </div>
     </div>
     <div class="row g-0 p-4 collapse" id="card-details-${id}">
-        <p style="text-align: justify;">${object.abstract}</p>
+        <p style="text-align: justify;">${searchContributions(object.name)}</p>
     </div>
   `;
     var card = document.createElement("div");
@@ -357,11 +278,6 @@ async function addFieldNames(id = "fields"){
     });
 
     document.getElementById("multiSelect").append(sel);
-    // const sel = document.createElement("div");
-    // sel.innerHTML = `
-    // <select name="field" id="fields" multiple>
-    // </select>
-    // `
 }
 
 /**
