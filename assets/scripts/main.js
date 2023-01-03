@@ -64,7 +64,7 @@ async function getScientistOfTheDay(limit = 3) {
     document.getElementById("loading-spinner").classList.remove("d-none");
 
     var today = new Date();
-    let date= today.getDate().toString().padStart(2,'0'); //01,02,03,...
+    let day = today.getDate().toString().padStart(2,'0'); //01,02,03,...
     let month = (today.getMonth()+1).toString().padStart(2,'0');
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
@@ -84,7 +84,7 @@ async function getScientistOfTheDay(limit = 3) {
         OPTIONAL {?scientist dbp:almaMater ?education}
         OPTIONAL {?scientist foaf:homepage ?homepage}
         OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER (?birthdate != "null"^^xsd:date && SUBSTR(STR(?birthdate), 6, 2) = "${date}" && SUBSTR(STR(?birthdate), 9, 2) = "${month}")
+        FILTER (?birthdate != "null"^^xsd:date && SUBSTR(STR(?birthdate), 6, 2) = "${month}" && SUBSTR(STR(?birthdate), 9, 2) = "${day}")
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
     }
