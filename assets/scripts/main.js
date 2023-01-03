@@ -51,6 +51,28 @@ async function getLabel(uri) {
     return response.results.bindings[0].label.value;
 }
 
+async function getScientistNames() {
+
+    let scientists = [];
+    //query
+    const query = `
+    SELECT DISTINCT ?name 
+    WHERE {
+        ?scientist a dbo:Scientist;
+                foaf:name ?name;
+                dbo:wikiPageWikiLink ?link.
+                FILTER(langMatches(lang(?name), "EN"))
+   
+    }
+    ORDER BY DESC(COUNT(?link))
+    `;
+    
+    let response = await dps.client().query(query).asJson()
+    scientists = response.results.bindings.map(cleanObject);
+    // console.log(scientists.slice(0, 10));
+    return scientists;
+}
+
 /**
  * Get a random scientist born on this day.
  * @param {number} limit - The number of results to return.
@@ -148,7 +170,49 @@ async function searchScientist(search, limit = 50) {
     ORDER BY DESC(COUNT(?link))
     LIMIT ${limit}
     `;
-    console.log(query);
+
+
+
+    var response = await dps.client().query(query).asJson()
+    return await response.results.bindings.map(cleanObject);
+}
+
+/**
+ * Search scientists by name.
+ * @param {string} name - The name of the scientist to search.
+ * @param {number} limit - The number of results to return.
+ * @returns {object} The list of scientists.
+ */
+async function searchScientistByName(name, limit = 50) {
+    const query = `
+    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
+        (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
+        (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
+    WHERE {
+        ?scientist a dbo:Scientist;
+                foaf:name ?name;
+                rdfs:comment ?comment;
+                dbo:wikiPageWikiLink ?link.
+        
+        OPTIONAL {?scientist dbo:abstract ?abstract}
+        OPTIONAL {?scientist dbo:birthDate ?birthdate}
+        OPTIONAL {?scientist dbp:birthDate ?birthdate}
+        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
+        OPTIONAL {?scientist dbp:education ?education}
+        OPTIONAL {?scientist dbp:almaMater ?education}
+        OPTIONAL {?scientist foaf:homepage ?homepage}
+        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
+        FILTER (regex(?name, "${name}", "i"))
+        FILTER(langMatches(lang(?comment), "EN"))
+        FILTER(langMatches(lang(?abstract), "EN"))
+        FILTER(langMatches(lang(?comment), "FR"))
+        FILTER(langMatches(lang(?abstract), "FR"))
+    }
+    ORDER BY DESC(COUNT(?link))
+    LIMIT ${limit}
+    `;
+
+
     var response = await dps.client().query(query).asJson()
     return await response.results.bindings.map(cleanObject);
 }
@@ -273,7 +337,6 @@ async function createSearchResults(search, id = "search-results", limit = 50) {
     console.log("Loading...");
     document.getElementById("search-icon").classList.add("d-none");
     document.getElementById("loading-spinner").classList.remove("d-none");
-
     let scientists = await searchScientist(search, limit)
     document.getElementById(id).innerHTML = "";
     scientists.forEach(s => {
