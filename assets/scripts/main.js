@@ -51,11 +51,6 @@ async function getLabel(uri) {
     return response.results.bindings[0].label.value;
 }
 
-/**
- * Get a random scientist born on this day.
- * @param {number} limit - The number of results to return.
- * @returns {object} The list of scientists.
- */
 async function getScientistNames() {
 
     let scientists = [];
@@ -91,7 +86,7 @@ async function getScientistOfTheDay(limit = 3) {
     document.getElementById("loading-spinner").classList.remove("d-none");
 
     var today = new Date();
-    let date= today.getDate().toString().padStart(2,'0'); //01,02,03,...
+    let day = today.getDate().toString().padStart(2,'0'); //01,02,03,...
     let month = (today.getMonth()+1).toString().padStart(2,'0');
     const query = `
     SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
@@ -111,7 +106,7 @@ async function getScientistOfTheDay(limit = 3) {
         OPTIONAL {?scientist dbp:almaMater ?education}
         OPTIONAL {?scientist foaf:homepage ?homepage}
         OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER (?birthdate != "null"^^xsd:date && SUBSTR(STR(?birthdate), 6, 2) = "${date}" && SUBSTR(STR(?birthdate), 9, 2) = "${month}")
+        FILTER (?birthdate != "null"^^xsd:date && SUBSTR(STR(?birthdate), 6, 2) = "${month}" && SUBSTR(STR(?birthdate), 9, 2) = "${day}")
         FILTER(langMatches(lang(?comment), "EN"))
         FILTER(langMatches(lang(?abstract), "EN"))
     }
@@ -141,7 +136,13 @@ async function searchScientist(search, limit = 50) {
         if (key == "education") { 
             filters += `FILTER (regex(?almaMater, "${value}", "i") || regex(?education, "${value}", "i"))\n`
         } else {
-            filters += `FILTER (regex(?${key}, "${value}", "i"))\n`;
+            filters += "FILTER (";
+            for (let i=0;i<value.length;i++){
+                filters += `regex(?${key}, "${value[i]}", "i") `;
+                if(i<value.length-1) filters += " || ";
+            }
+            filters += ")\n";
+           
         }
     });
     const query = `
@@ -169,6 +170,8 @@ async function searchScientist(search, limit = 50) {
     ORDER BY DESC(COUNT(?link))
     LIMIT ${limit}
     `;
+
+
 
     var response = await dps.client().query(query).asJson()
     return await response.results.bindings.map(cleanObject);
@@ -209,80 +212,10 @@ async function searchScientistByName(name, limit = 50) {
     LIMIT ${limit}
     `;
 
+
     var response = await dps.client().query(query).asJson()
     return await response.results.bindings.map(cleanObject);
 }
-
-/**
- * Search scientists by institution
- * @param {string} institution - The name of the institution.
- * @param {number} limit - The number of results to return.
- * @returns {object} The list of scientists.
- */
-async function searchScientistByInstitution(institution, limit = 50) {
-    const query = `
-    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
-    (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
-    (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
-    WHERE {
-        ?scientist a dbo:Scientist;
-                foaf:name ?name;
-                rdfs:comment ?comment;
-                dbo:wikiPageWikiLink ?link.
-        OPTIONAL {?scientist dbo:abstract ?abstract}
-        OPTIONAL {?scientist dbo:birthDate ?birthdate}
-        OPTIONAL {?scientist dbp:birthDate ?birthdate}
-        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
-        OPTIONAL {?scientist dbp:education ?education}
-        OPTIONAL {?scientist dbp:almaMater ?education}
-        OPTIONAL {?scientist foaf:homepage ?homepage}
-        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER(regex(?education,"${institution}")||regex(?almaMater, "${institution}", "i")) 
-        FILTER(langMatches(lang(?comment), "EN"))
-        FILTER(langMatches(lang(?abstract), "EN"))
-    }
-    ORDER BY DESC(COUNT(?link))
-    LIMIT ${limit}
-    `;
-    var response = await dps.client().query(query).asJson()
-    return await response.results.bindings.map(cleanObject);
-}
-
-/**
- * Search scientists by field
- * @param {string} field - The field.
- * @param {number} limit - The number of results to return.
- * @returns {object} The list of scientists.
- */
-async function searchScientistByField(field, limit = 50) {
-    const query = `
-    SELECT DISTINCT ?name ?comment ?birthdate ?abstract 
-    (GROUP_CONCAT( DISTINCT ?education; separator = "; ") AS ?education)  
-    (GROUP_CONCAT( DISTINCT ?fields; separator = "; ") AS ?fields) ?homepage ?thumbnail
-    WHERE {
-        ?scientist a dbo:Scientist;
-                foaf:name ?name;
-                rdfs:comment ?comment;
-                dbo:wikiPageWikiLink ?link.
-        OPTIONAL {?scientist dbo:abstract ?abstract}
-        OPTIONAL {?scientist dbo:birthDate ?birthdate}
-        OPTIONAL {?scientist dbp:birthDate ?birthdate}
-        OPTIONAL {?scientist dbo:academicDiscipline ?fields}
-        OPTIONAL {?scientist dbp:education ?education}
-        OPTIONAL {?scientist dbp:almaMater ?education}
-        OPTIONAL {?scientist foaf:homepage ?homepage}
-        OPTIONAL {?scientist dbo:thumbnail ?thumbnail}
-        FILTER(regex(?fields,"${field}"))
-        FILTER(langMatches(lang(?comment), "EN"))
-        FILTER(langMatches(lang(?abstract), "EN"))
-    }
-    ORDER BY DESC(COUNT(?link))
-    LIMIT ${limit}
-    `;
-    var response = await dps.client().query(query).asJson()
-    return await response.results.bindings.map(cleanObject);
-}
-
 
 /**
  * Create a card for a scientist.
